@@ -10,7 +10,9 @@ the dongle has the usb id ffff:1122 and the program talks to it via usb urb out 
 
 (find lsusb -vv below)
 
-== The protocol ==
+The protocol
+============================
+
 between the supplied exe and the usb dongle can be sniffed with wireshark. You will find payloads like this: `1A85F070200A0018`. 
 The program also has 3 parameters (find them in the settings box)
 - Bit Width 100-400 (in 50 increments): seems to be not relevant to generation of the control code.
@@ -20,15 +22,17 @@ The program also has 3 parameters (find them in the settings box)
 Then you have the "switch number" (1-4, all) and action (on, off). Observations in the spreadsheet.
 Take the first example: Bi 100	Frame:10	ID: 6789
 
-The first two byte are the ID in hex: `1A85`.
-action byte, 1_ON is `F0`.
-unknown byte, which is closely related to action. in this example `70`.
-then you have a useless padding; value not important of `20`
-then frame in hex `0A`
-then follow two byte which are useless and change every time you restart the program. here `0018`
-assemble and you get the above code `1A85_F0_70_20_0A_0018`.
+- The first two byte are the ID in hex: `1A85`.
+- action byte, 1_ON is `F0`.
+- unknown byte, which is closely related to action. in this example `70`.
+- then you have a useless padding; value not important of `20`
+- then frame in hex `0A`
+- then follow two byte which are useless and change every time you restart the program. here `0018`
+- assemble and you get the above code `1A85_F0_70_20_0A_0018`.
 
-= Demo implementation =
+Demo implementation
+============================
+
 is based on pyusb. install pyusb first, tested with version pyusb-1.0.0b1. 
 With this command-line script you can control your outlets (Funksteckdose) by command line, scripts, etc... use your fantasy!
 
