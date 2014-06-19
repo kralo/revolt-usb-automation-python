@@ -16,15 +16,15 @@ The protocol
 between the supplied exe and the usb dongle can be sniffed with wireshark. You will find payloads like this: `1A85F070200A0018`. 
 The program also has 3 parameters (find them in the settings box)
 - Bit Width 100-400 (in 50 increments): seems to be not relevant to generation of the control code.
-- Frame 3-255
-- ID 0-65535
+- Frame 3-255 the number of times the frame is resend. More often, more likely the outlet will receive the message, but the usb dongle is working longer on it
+- ID 0-65535 
 
 Then you have the "switch number" (1-4, all) and action (on, off). Observations in the spreadsheet.
 Take the first example: Bi 100	Frame:10	ID: 6789
 
 - The first two byte are the ID in hex: `1A85`.
 - action byte, 1_ON is `F0`.
-- unknown byte, which is closely related to action. in this example `70`.
+- Checkbyte. Byte 1-4 mod 256 have to be 255
 - then you have a useless padding; value not important of `20`
 - then frame in hex `0A`
 - then follow two byte which are useless and change every time you restart the program. here `0018`
@@ -33,15 +33,19 @@ Take the first example: Bi 100	Frame:10	ID: 6789
 Demo implementation
 ============================
 
-is based on pyusb. install pyusb first, tested with version pyusb-1.0.0b1. 
+is based on pyusb. make sure you have installed pyusb first, tested with version pyusb-1.0.0b1. 
 With this command-line script you can control your outlets (Funksteckdose) by command line, scripts, etc... use your fantasy!
 
-execute with `python send-usb-command.python offa` to switch all of. Knows `on<id>` and `off<id>` as parameters. Only one action per execution. Have fun!
+execute with `python send-usb-command.py offa` to switch all of. Knows `on<id>` and `off<id>` as parameters. Only one action per execution. Have fun!
 
 As I don't know how to calculate the intermediate byte no 4 (yet), the example script is fixed to frame/id values, but works. However, you likely will not be able to combine multiple id/outlet combinations in your house...
 
+Additional Credits
+===
+go to Ralph Babel, http://babel.de, for finding the checksum and the resend-frame behavior. Thanks!
 
-===lsusb -vv===
+lsusb -vv
+===
 
 
 ```
