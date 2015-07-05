@@ -12,6 +12,7 @@ import sys
 import math
 import argparse
 
+
 ACTION_VALUES = {
     "on1": 15,
     "off1": 14,
@@ -31,17 +32,82 @@ ACTION_VALUES = {
     "off8": 0,  # has no on8 counterpart!
 }
 
+
+def find_revolt_endpoint():
+    # find our device
+    device = usb.core.find(idVendor=0xffff, idProduct=0x1122)
+
+    # was it found?
+    if device is None:
+        raise ValueError('Device not found')
+
+    # set the active configuration. With no arguments, the first
+    # configuration will be the active one
+    device.set_configuration()
+
+    # get an endpoint instance
+    device_configuration = device.get_active_configuration()
+    interface_number = device_configuration[(0, 0)].bInterfaceNumber
+    #usb.util.claim_interface(device, interface_number)
+    alternate_setting = usb.control.get_interface(device, interface_number)
+    interface = usb.util.find_descriptor(
+        device_configuration, bInterfaceNumber=interface_number,
+        bAlternateSetting=alternate_setting
+    )
+
+    endpoint = usb.util.find_descriptor(
+        interface,
+        # match the first OUT endpoint
+        custom_match=(lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
+    )
+
+    assert endpoint is not None
+
+    return endpoint
+
+
+def prepare_message(frame_id, frame_count, command):
+    msgpart_frame_count = hex(frame_count).split('x')[1].ljust(2, '0')  #
+
+    # convert the id to hex but get rid of the '0x' at the beginning to be able to
+    # concatenate the message and make sure there are 4 characters (1 byte in hex)
+    msgpart_id = hex(frame_id).split('x')[1].ljust(4, '0')
+
+    msgpart_padding = "20"  # not relevant padding
+
+    msgpart_end = "0000"  # unknown, not relevant
+
+    if command in ACTION_VALUES:
+        raw_action = ACTION_VALUES[command]
+
+    else:
+        raise ValueError('unknown action: %s' % command)
+
+    msgpart_action = hex(raw_action).split('x')[1].ljust(2, '0')
+
+    # compute the checksum: byte01+02+03+04 mod 256 have to be 255
+    checksum = int(msgpart_id[:2], 16) + int(msgpart_id[2:], 16) + raw_action * 16
+    raw_checksum = int(math.ceil(checksum / 256.0) * 256) - checksum - 1
+    msgpart_checksum = hex(raw_checksum).split('x')[1].ljust(2, '0')
+
+    message = msgpart_id + msgpart_action + msgpart_checksum + msgpart_padding + msgpart_frame_count + msgpart_end
+
+    return message
+
+
 def argparse_frame_count_constraints(value):
     intvalue = int(value)
     if intvalue < 1 or intvalue > 255:
         raise argparse.ArgumentTypeError('Frame transmission count not in range (1 to 255): %s' % value)
     return intvalue
 
+
 def argparse_frame_id_constraints(value):
     intvalue = int(value)
     if intvalue < 0 or intvalue > 65535:
         raise argparse.ArgumentTypeError('Frame ID not in range (0 to 65535): %s' % value)
     return intvalue
+
 
 def main():
     # the original software knows 3 parameters
@@ -71,61 +137,10 @@ def main():
         print('Using ID %d' % raw_id)
         print('Requesting %d frame transmissions' % frame_count)
 
-    # find our device
-    device = usb.core.find(idVendor=0xffff, idProduct=0x1122)
-
-    # was it found?
-    if device is None:
-        raise ValueError('Device not found')
-
-    # set the active configuration. With no arguments, the first
-    # configuration will be the active one
-    device.set_configuration()
-
-    # get an endpoint instance
-    device_configuration = device.get_active_configuration()
-    interface_number = device_configuration[(0, 0)].bInterfaceNumber
-    usb.util.claim_interface(device, interface_number)
-    alternate_setting = usb.control.get_interface(device, interface_number)
-    interface = usb.util.find_descriptor(
-        device_configuration, bInterfaceNumber=interface_number,
-        bAlternateSetting=alternate_setting
-    )
-
-    endpoint = usb.util.find_descriptor(
-        interface,
-        # match the first OUT endpoint
-        custom_match=(lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
-    )
-
-    assert endpoint is not None
+    endpoint = find_revolt_endpoint()
 
     for command in args.command:
-        msgpart_frame_count = hex(frame_count).split('x')[1].ljust(2, '0')  #
-
-        # convert the id to hex but get rid of the '0x' at the beginning to be able to
-        # concatenate the message and make sure there are 4 characters (1 byte in hex)
-        msgpart_id = hex(raw_id).split('x')[1].ljust(4, '0')
-
-        msgpart_padding = "20"  # not relevant padding
-
-        msgpart_end = "0000"  # unknown, not relevant
-
-        if command in ACTION_VALUES:
-            raw_action = ACTION_VALUES[command]
-
-        else:
-            raise ValueError('unknown action: %s' % command)
-
-        msgpart_action = hex(raw_action).split('x')[1].ljust(2, '0')
-
-        # compute the checksum: byte01+02+03+04 mod 256 have to be 255
-        checksum = int(msgpart_id[:2], 16) + int(msgpart_id[2:], 16) + raw_action * 16
-
-        raw_checksum = int(math.ceil(checksum / 256.0) * 256) - checksum - 1
-        msgpart_checksum = hex(raw_checksum).split('x')[1].ljust(2, '0')
-
-        message = msgpart_id + msgpart_action + msgpart_checksum + msgpart_padding + msgpart_frame_count + msgpart_end
+        message = prepare_message(raw_id, frame_count, command)
 
         if args.verbose:
             print 'sending command %s (0x%s)' % (command, message)
@@ -133,7 +148,8 @@ def main():
         # write the data
         endpoint.write(binascii.a2b_hex(message))
 
-    usb.util.release_interface(device, interface_number)
+    #usb.util.release_interface(device, interface_number)
+
 
 if __name__ == "__main__":
     main()
