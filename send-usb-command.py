@@ -10,20 +10,68 @@ import usb.util
 import binascii
 import sys
 import math
+import argparse
+
+ACTION_VALUES = {
+    "on1": 15,
+    "off1": 14,
+    "on2": 13,
+    "off2": 12,
+    "on3": 11,
+    "off3": 10,
+    "on4": 9,
+    "off4": 8,
+    "on5": 7,
+    "off5": 6,
+    "on6": 5,
+    "off6": 4,
+    "on7": 3,  # has no off7 counterpart!
+    "ona": 2,
+    "offa": 1,
+    "off8": 0,  # has no on8 counterpart!
+}
+
+def argparse_frame_count_constraints(value):
+    intvalue = int(value)
+    if intvalue < 1 or intvalue > 255:
+        raise argparse.ArgumentTypeError('Frame transmission count not in range (1 to 255): %s' % value)
+    return intvalue
+
+def argparse_frame_id_constraints(value):
+    intvalue = int(value)
+    if intvalue < 0 or intvalue > 65535:
+        raise argparse.ArgumentTypeError('Frame ID not in range (0 to 65535): %s' % value)
+    return intvalue
 
 def main():
     # the original software knows 3 parameters
     # Bit Width 100+6*50 seems not to be used, doesn't change the message
+
     # ID 0-65535
-    raw_id = 6789
-    raw_frame = 2  # 3-255 number of sent frames (resend)
-    raw_action = 00  # placeholder for action
+    default_raw_id = 6789
+    default_frame_count = 2  # 3-255 number of sent frames (resend)
 
-    if len(sys.argv) >= 3:  # if you provided arg, take it
-        raw_id = int(sys.argv[2])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("command")
+    parser.add_argument("--verbose", "-v", help="increase output verbosity")
+    parser.add_argument("--tx-count", "-n", type=argparse_frame_count_constraints, default=default_frame_count,
+                        help='Number of frame transmissions. More transmissions increase chance that the outlet '
+                             'receives them, but also increases transmission duration. Defaults to 2.')
+    parser.add_argument("--id", "-i", type=argparse_frame_id_constraints, default=default_raw_id,
+                        help='Frame ID (0 - 65535). Can be used to control multiple sets of outlets. Defaults to 6789.')
+    args = parser.parse_args()
 
-    print raw_id
-    MSG_FRAME = hex(raw_frame).split('x')[1].ljust(2, '0')  #
+    frame_count = args.tx_count
+    raw_id = args.id
+
+    if not args.command:
+        raise ValueError('No action specified')
+
+    if args.verbose:
+        print('Using ID %d' % raw_id)
+        print('Requesting %d frame transmissions' % frame_count)
+
+    MSG_FRAME = hex(frame_count).split('x')[1].ljust(2, '0')  #
     # convert the id to hex but get rid of the '0x' at the beginning to be able to concatenate the message and make sure there are 4 characters (1 byte in hex)
     MSG_ID = hex(raw_id).split('x')[1].ljust(4, '0')
 
@@ -31,33 +79,11 @@ def main():
 
     MSG_FIN = "0000"  # unknown, not relevant
 
-    if len(sys.argv) < 2:
-        raise ValueError('no action specified')
-
-    action_values = {
-        "on1": 15,
-        "off1": 14,
-        "on2": 13,
-        "off2": 12,
-        "on3": 11,
-        "off3": 10,
-        "on4": 9,
-        "off4": 8,
-        "on5": 7,
-        "off5": 6,
-        "on6": 5,
-        "off6": 4,
-        "on7": 3,  # has no off7 counterpart!
-        "ona": 2,
-        "offa": 1,
-        "off8": 0,  # has no on8 counterpart!
-    }
-
-    if sys.argv[1] in action_values:
-        raw_action = action_values[sys.argv[1]]
+    if args.command in ACTION_VALUES:
+        raw_action = ACTION_VALUES[args.command]
 
     else:
-        raise ValueError('unknown action: %s' % sys.argv[1])
+        raise ValueError('unknown action: %s' % args.command)
 
     MSG_ACTION = hex(raw_action).split('x')[1].ljust(2, '0')
 
