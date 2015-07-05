@@ -8,7 +8,6 @@
 import usb.core
 import usb.util
 import binascii
-import sys
 import math
 import argparse
 
