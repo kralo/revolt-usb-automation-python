@@ -101,15 +101,15 @@ def main():
     assert endpoint is not None
 
     for command in args.command:
-        MSG_FRAME = hex(frame_count).split('x')[1].ljust(2, '0')  #
+        msgpart_frame_count = hex(frame_count).split('x')[1].ljust(2, '0')  #
 
         # convert the id to hex but get rid of the '0x' at the beginning to be able to
         # concatenate the message and make sure there are 4 characters (1 byte in hex)
-        MSG_ID = hex(raw_id).split('x')[1].ljust(4, '0')
+        msgpart_id = hex(raw_id).split('x')[1].ljust(4, '0')
 
-        MSG_PADDING_BYTE5 = "20"  # not relevant padding
+        msgpart_padding = "20"  # not relevant padding
 
-        MSG_FIN = "0000"  # unknown, not relevant
+        msgpart_end = "0000"  # unknown, not relevant
 
         if command in ACTION_VALUES:
             raw_action = ACTION_VALUES[command]
@@ -117,15 +117,16 @@ def main():
         else:
             raise ValueError('unknown action: %s' % command)
 
-        MSG_ACTION = hex(raw_action).split('x')[1].ljust(2, '0')
+        msgpart_action = hex(raw_action).split('x')[1].ljust(2, '0')
 
         # compute the checksum: byte01+02+03+04 mod 256 have to be 255
-        checksum = int(MSG_ID[:2], 16) + int(MSG_ID[2:], 16) + raw_action * 16
+        checksum = int(msgpart_id[:2], 16) + int(msgpart_id[2:], 16) + raw_action * 16
 
         raw_checksum = int(math.ceil(checksum / 256.0) * 256) - checksum - 1
-        MSG_CHECKSUM = hex(raw_checksum).split('x')[1].ljust(2, '0')
+        msgpart_checksum = hex(raw_checksum).split('x')[1].ljust(2, '0')
 
-        message = MSG_ID + MSG_ACTION + MSG_CHECKSUM + MSG_PADDING_BYTE5 + MSG_FRAME + MSG_FIN
+        message = msgpart_id + msgpart_action + msgpart_checksum + msgpart_padding + msgpart_frame_count + msgpart_end
+
         if args.verbose:
             print 'sending command %s (0x%s)' % (command, message)
 
