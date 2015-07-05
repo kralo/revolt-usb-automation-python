@@ -81,38 +81,38 @@ message = MSG_ID + MSG_ACTION + MSG_CHECKSUM + MSG_PADDING_BYTE5 + MSG_FRAME + M
 print "sent " + message
 
 # find our device
-dev = usb.core.find(idVendor=0xffff, idProduct=0x1122)
+device = usb.core.find(idVendor=0xffff, idProduct=0x1122)
 
 # was it found?
-if dev is None:
+if device is None:
     raise ValueError('Device not found')
 
 # was it found?
-if dev is None:
+if device is None:
     raise ValueError('Device not found')
 
 # set the active configuration. With no arguments, the first
 # configuration will be the active one
-dev.set_configuration()
+device.set_configuration()
 
 # get an endpoint instance
-cfg = dev.get_active_configuration()
-interface_number = cfg[(0, 0)].bInterfaceNumber
-usb.util.claim_interface(dev, interface_number)
-alternate_setting = usb.control.get_interface(dev, interface_number)
-intf = usb.util.find_descriptor(
-    cfg, bInterfaceNumber=interface_number,
+device_configuration = device.get_active_configuration()
+interface_number = device_configuration[(0, 0)].bInterfaceNumber
+usb.util.claim_interface(device, interface_number)
+alternate_setting = usb.control.get_interface(device, interface_number)
+interface = usb.util.find_descriptor(
+    device_configuration, bInterfaceNumber=interface_number,
     bAlternateSetting=alternate_setting
 )
 
-ep = usb.util.find_descriptor(
-    intf,
+endpoint = usb.util.find_descriptor(
+    interface,
     # match the first OUT endpoint
     custom_match=(lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
 )
 
-assert ep is not None
+assert endpoint is not None
 
 # write the data
-ep.write(binascii.a2b_hex(message))
-usb.util.release_interface(dev, interface_number)
+endpoint.write(binascii.a2b_hex(message))
+usb.util.release_interface(device, interface_number)
