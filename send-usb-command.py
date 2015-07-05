@@ -52,7 +52,7 @@ def main():
     default_frame_count = 2  # 3-255 number of sent frames (resend)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("command")
+    parser.add_argument("command", nargs='+')
     parser.add_argument("--verbose", "-v", help="increase output verbosity")
     parser.add_argument("--tx-count", "-n", type=argparse_frame_count_constraints, default=default_frame_count,
                         help='Number of frame transmissions. More transmissions increase chance that the outlet '
@@ -70,31 +70,6 @@ def main():
     if args.verbose:
         print('Using ID %d' % raw_id)
         print('Requesting %d frame transmissions' % frame_count)
-
-    MSG_FRAME = hex(frame_count).split('x')[1].ljust(2, '0')  #
-    # convert the id to hex but get rid of the '0x' at the beginning to be able to concatenate the message and make sure there are 4 characters (1 byte in hex)
-    MSG_ID = hex(raw_id).split('x')[1].ljust(4, '0')
-
-    MSG_PADDING_BYTE5 = "20"  # not relevant padding
-
-    MSG_FIN = "0000"  # unknown, not relevant
-
-    if args.command in ACTION_VALUES:
-        raw_action = ACTION_VALUES[args.command]
-
-    else:
-        raise ValueError('unknown action: %s' % args.command)
-
-    MSG_ACTION = hex(raw_action).split('x')[1].ljust(2, '0')
-
-    # compute the checksum: byte01+02+03+04 mod 256 have to be 255
-    checksum = int(MSG_ID[:2], 16) + int(MSG_ID[2:], 16) + raw_action * 16
-
-    raw_checksum = int(math.ceil(checksum / 256.0) * 256) - checksum - 1
-    MSG_CHECKSUM = hex(raw_checksum).split('x')[1].ljust(2, '0')
-
-    message = MSG_ID + MSG_ACTION + MSG_CHECKSUM + MSG_PADDING_BYTE5 + MSG_FRAME + MSG_FIN
-    print "sent " + message
 
     # find our device
     device = usb.core.find(idVendor=0xffff, idProduct=0x1122)
@@ -125,8 +100,38 @@ def main():
 
     assert endpoint is not None
 
-    # write the data
-    endpoint.write(binascii.a2b_hex(message))
+    for command in args.command:
+        MSG_FRAME = hex(frame_count).split('x')[1].ljust(2, '0')  #
+
+        # convert the id to hex but get rid of the '0x' at the beginning to be able to
+        # concatenate the message and make sure there are 4 characters (1 byte in hex)
+        MSG_ID = hex(raw_id).split('x')[1].ljust(4, '0')
+
+        MSG_PADDING_BYTE5 = "20"  # not relevant padding
+
+        MSG_FIN = "0000"  # unknown, not relevant
+
+        if command in ACTION_VALUES:
+            raw_action = ACTION_VALUES[command]
+
+        else:
+            raise ValueError('unknown action: %s' % command)
+
+        MSG_ACTION = hex(raw_action).split('x')[1].ljust(2, '0')
+
+        # compute the checksum: byte01+02+03+04 mod 256 have to be 255
+        checksum = int(MSG_ID[:2], 16) + int(MSG_ID[2:], 16) + raw_action * 16
+
+        raw_checksum = int(math.ceil(checksum / 256.0) * 256) - checksum - 1
+        MSG_CHECKSUM = hex(raw_checksum).split('x')[1].ljust(2, '0')
+
+        message = MSG_ID + MSG_ACTION + MSG_CHECKSUM + MSG_PADDING_BYTE5 + MSG_FRAME + MSG_FIN
+        if args.verbose:
+            print 'sending command %s (0x%s)' % (command, message)
+
+        # write the data
+        endpoint.write(binascii.a2b_hex(message))
+
     usb.util.release_interface(device, interface_number)
 
 if __name__ == "__main__":
