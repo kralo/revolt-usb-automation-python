@@ -94,6 +94,13 @@ def prepare_message(frame_id, frame_count, command):
     return message
 
 
+def send_message(endpoint, frame_id, frame_count, command):
+    message = prepare_message(frame_id, frame_count, command)
+
+    # write the data
+    endpoint.write(binascii.a2b_hex(message))
+
+
 def argparse_frame_count_constraints(value):
     intvalue = int(value)
     if intvalue < 1 or intvalue > 255:
@@ -139,13 +146,10 @@ def main():
     endpoint = find_revolt_endpoint()
 
     for command in args.command:
-        message = prepare_message(raw_id, frame_count, command)
-
         if args.verbose:
-            print 'sending command %s (0x%s)' % (command, message)
+            print 'sending command %s' % command
 
-        # write the data
-        endpoint.write(binascii.a2b_hex(message))
+        send_message(raw_id, frame_count, command)
 
     #usb.util.release_interface(device, interface_number)
 
