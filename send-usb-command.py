@@ -87,10 +87,6 @@ device = usb.core.find(idVendor=0xffff, idProduct=0x1122)
 if device is None:
     raise ValueError('Device not found')
 
-# was it found?
-if device is None:
-    raise ValueError('Device not found')
-
 # set the active configuration. With no arguments, the first
 # configuration will be the active one
 device.set_configuration()
