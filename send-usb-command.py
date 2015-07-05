@@ -33,41 +33,30 @@ MSG_FIN = "0000"  # unknown, not relevant
 if len(sys.argv) < 2:
     raise ValueError('no action specified')
 
-if sys.argv[1] == "on1":
-    raw_action = 15
-elif sys.argv[1] == "off1":
-    raw_action = 14
-elif sys.argv[1] == "on2":
-    raw_action = 13
-elif sys.argv[1] == "off2":
-    raw_action = 12
-elif sys.argv[1] == "on3":
-    raw_action = 11
-elif sys.argv[1] == "off3":
-    raw_action = 10
-elif sys.argv[1] == "on4":
-    raw_action = 9
-elif sys.argv[1] == "off4":
-    raw_action = 8
-elif sys.argv[1] == "on5":
-    raw_action = 7
-elif sys.argv[1] == "off5":
-    raw_action = 6
-elif sys.argv[1] == "on6":
-    raw_action = 5
-elif sys.argv[1] == "off6":
-    raw_action = 4
-elif sys.argv[1] == "on7":  # has no off7 counterpart !
-    raw_action = 3
-elif sys.argv[1] == "ona":
-    raw_action = 2
-elif sys.argv[1] == "offa":
-    raw_action = 1
-elif sys.argv[1] == "off8":  # has no on8 counterpart!
-    raw_action = 0
+action_values = {
+    "on1": 15,
+    "off1": 14,
+    "on2": 13,
+    "off2": 12,
+    "on3": 11,
+    "off3": 10,
+    "on4": 9,
+    "off4": 8,
+    "on5": 7,
+    "off5": 6,
+    "on6": 5,
+    "off6": 4,
+    "on7": 3,  # has no off7 counterpart!
+    "ona": 2,
+    "offa": 1,
+    "off8": 0,  # has no on8 counterpart!
+}
+
+if sys.argv[1] in action_values:
+    raw_action = action_values[sys.argv[1]]
 
 else:
-    raise ValueError('no known action')
+    raise ValueError('unknown action: %s' % sys.argv[1])
 
 MSG_ACTION = hex(raw_action).split('x')[1].ljust(2, '0')
 
