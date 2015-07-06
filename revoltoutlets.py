@@ -1,7 +1,7 @@
 #!/usr/bin/python
-#
-# Script to control the revolt-power px-1672 outlets via usb with the provided dongle.
-# usage python revolt...py <action> <id>
+
+# Script to control the Revolt PX-1672 remote-control power outlets via the provided USB dongle.
+# Requires pyusb.
 
 # based on the pyusb tutorial script
 
@@ -157,7 +157,7 @@ def main():
     with RevoltEndpoint() as endpoint:
         for command in args.command:
             if args.verbose:
-                print 'sending command %s' % command
+                print 'sending command \'%s\'' % command
 
             send_message(endpoint, raw_id, frame_count, command)
 
