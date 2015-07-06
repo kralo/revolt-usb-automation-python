@@ -32,13 +32,14 @@ ACTION_VALUES = {
 }
 
 
-class RevoltEndpoint(object):
+class RevoltController(object):
     VENDOR_ID = 0xffff
     PRODUCT_ID = 0x1122
 
     # reminder: these are the variables that will be used by this class
     device = None
     interface_number = None
+    endpoint = None
 
     def __enter__(self):
         # find our device
@@ -70,46 +71,48 @@ class RevoltEndpoint(object):
 
         assert endpoint is not None
 
-        return endpoint
+        self.endpoint = endpoint
+
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         usb.util.release_interface(self.device, self.interface_number)
 
+    def send_command(self, frame_id, frame_count, command):
+        message = self.prepare_message(frame_id, frame_count, command)
+        self.send_message(message)
 
-def prepare_message(frame_id, frame_count, command):
-    msgpart_frame_count = hex(frame_count).split('x')[1].ljust(2, '0')  #
+    def send_message(self, message):
+        # write the data
+        self.endpoint.write(binascii.a2b_hex(message))
 
-    # convert the id to hex but get rid of the '0x' at the beginning to be able to
-    # concatenate the message and make sure there are 4 characters (1 byte in hex)
-    msgpart_id = hex(frame_id).split('x')[1].ljust(4, '0')
+    def prepare_message(self, frame_id, frame_count, command):
+        msgpart_frame_count = hex(frame_count).split('x')[1].ljust(2, '0')  #
 
-    msgpart_padding = "20"  # not relevant padding
+        # convert the id to hex but get rid of the '0x' at the beginning to be able to
+        # concatenate the message and make sure there are 4 characters (1 byte in hex)
+        msgpart_id = hex(frame_id).split('x')[1].ljust(4, '0')
 
-    msgpart_end = "0000"  # unknown, not relevant
+        msgpart_padding = "20"  # not relevant padding
 
-    if command in ACTION_VALUES:
-        raw_action = ACTION_VALUES[command]
+        msgpart_end = "0000"  # unknown, not relevant
 
-    else:
-        raise ValueError('unknown action: %s' % command)
+        if command in ACTION_VALUES:
+            raw_action = ACTION_VALUES[command]
 
-    msgpart_action = hex(raw_action).split('x')[1].ljust(2, '0')
+        else:
+            raise ValueError('unknown action: %s' % command)
 
-    # compute the checksum: byte01+02+03+04 mod 256 have to be 255
-    checksum = int(msgpart_id[:2], 16) + int(msgpart_id[2:], 16) + raw_action * 16
-    raw_checksum = int(math.ceil(checksum / 256.0) * 256) - checksum - 1
-    msgpart_checksum = hex(raw_checksum).split('x')[1].ljust(2, '0')
+        msgpart_action = hex(raw_action).split('x')[1].ljust(2, '0')
 
-    message = msgpart_id + msgpart_action + msgpart_checksum + msgpart_padding + msgpart_frame_count + msgpart_end
+        # compute the checksum: byte01+02+03+04 mod 256 have to be 255
+        checksum = int(msgpart_id[:2], 16) + int(msgpart_id[2:], 16) + raw_action * 16
+        raw_checksum = int(math.ceil(checksum / 256.0) * 256) - checksum - 1
+        msgpart_checksum = hex(raw_checksum).split('x')[1].ljust(2, '0')
 
-    return message
+        message = msgpart_id + msgpart_action + msgpart_checksum + msgpart_padding + msgpart_frame_count + msgpart_end
 
-
-def send_message(endpoint, frame_id, frame_count, command):
-    message = prepare_message(frame_id, frame_count, command)
-
-    # write the data
-    endpoint.write(binascii.a2b_hex(message))
+        return message
 
 
 def argparse_frame_count_constraints(value):
@@ -154,12 +157,12 @@ def main():
         print('Using ID %d' % raw_id)
         print('Requesting %d frame transmissions' % frame_count)
 
-    with RevoltEndpoint() as endpoint:
+    with RevoltController() as controller:
         for command in args.command:
             if args.verbose:
                 print 'sending command \'%s\'' % command
 
-            send_message(endpoint, raw_id, frame_count, command)
+            controller.send_command(raw_id, frame_count, command)
 
 
 
