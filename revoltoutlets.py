@@ -32,37 +32,48 @@ ACTION_VALUES = {
 }
 
 
-def find_revolt_endpoint():
-    # find our device
-    device = usb.core.find(idVendor=0xffff, idProduct=0x1122)
+class RevoltEndpoint(object):
+    VENDOR_ID = 0xffff
+    PRODUCT_ID = 0x1122
 
-    # was it found?
-    if device is None:
-        raise ValueError('Device not found')
+    # reminder: these are the variables that will be used by this class
+    device = None
+    interface_number = None
 
-    # set the active configuration. With no arguments, the first
-    # configuration will be the active one
-    device.set_configuration()
+    def __enter__(self):
+        # find our device
+        self.device = usb.core.find(idVendor=self.VENDOR_ID, idProduct=self.PRODUCT_ID)
 
-    # get an endpoint instance
-    device_configuration = device.get_active_configuration()
-    interface_number = device_configuration[(0, 0)].bInterfaceNumber
-    #usb.util.claim_interface(device, interface_number)
-    alternate_setting = usb.control.get_interface(device, interface_number)
-    interface = usb.util.find_descriptor(
-        device_configuration, bInterfaceNumber=interface_number,
-        bAlternateSetting=alternate_setting
-    )
+        # was it found?
+        if self.device is None:
+            raise ValueError('Device not found')
 
-    endpoint = usb.util.find_descriptor(
-        interface,
-        # match the first OUT endpoint
-        custom_match=(lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
-    )
+        # set the active configuration. With no arguments, the first
+        # configuration will be the active one
+        self.device.set_configuration()
 
-    assert endpoint is not None
+        # get an endpoint instance
+        device_configuration = self.device.get_active_configuration()
+        self.interface_number = device_configuration[(0, 0)].bInterfaceNumber
+        usb.util.claim_interface(self.device, self.interface_number)
+        alternate_setting = usb.control.get_interface(self.device, self.interface_number)
+        interface = usb.util.find_descriptor(
+            device_configuration, bInterfaceNumber=self.interface_number,
+            bAlternateSetting=alternate_setting
+        )
 
-    return endpoint
+        endpoint = usb.util.find_descriptor(
+            interface,
+            # match the first OUT endpoint
+            custom_match=(lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
+        )
+
+        assert endpoint is not None
+
+        return endpoint
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        usb.util.release_interface(self.device, self.interface_number)
 
 
 def prepare_message(frame_id, frame_count, command):
@@ -143,15 +154,13 @@ def main():
         print('Using ID %d' % raw_id)
         print('Requesting %d frame transmissions' % frame_count)
 
-    endpoint = find_revolt_endpoint()
+    with RevoltEndpoint() as endpoint:
+        for command in args.command:
+            if args.verbose:
+                print 'sending command %s' % command
 
-    for command in args.command:
-        if args.verbose:
-            print 'sending command %s' % command
+            send_message(endpoint, raw_id, frame_count, command)
 
-        send_message(raw_id, frame_count, command)
-
-    #usb.util.release_interface(device, interface_number)
 
 
 if __name__ == "__main__":
