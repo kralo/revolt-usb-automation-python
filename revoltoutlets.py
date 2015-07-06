@@ -136,7 +136,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("command", nargs='+')
-    parser.add_argument("--verbose", "-v", help="increase output verbosity")
+    parser.add_argument("--verbose", "-v", action='store_true', help="increase output verbosity")
     parser.add_argument("--tx-count", "-n", type=argparse_frame_count_constraints, default=default_frame_count,
                         help='Number of frame transmissions. More transmissions increase chance that the outlet '
                              'receives them, but also increases transmission duration. Defaults to 2.')
