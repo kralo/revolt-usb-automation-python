@@ -1,51 +1,67 @@
 revolt-usb-automation-python
 ============================
 
-Python example to command wireless 433mhz power outlets
+Python example to control wireless 433MHz power outlets
 
-The pearl / revolt-power px-1672 and -1674 is a package with a 433 mhz power outlet and a usb dongle.
-The only software to control it that comes supplied is the gui-only `Huading RF.exe` (About Dialog: First RF V1.0 Hanson Han).
+The Pearl / revolt PX-1672 and PX-1674 is a package with a power outlet that be
+controlled remotely via 433 MHz RF and a USB dongle.
+Pearl only supplies a Windows-only GUI application `Huading RF.exe` (About
+Dialog: First RF V1.0 Hanson Han) to control the outlets, but their USB
+protocol has been reverse-engineered.
 
-the dongle has the usb id ffff:1122 and the program talks to it via usb urb out packets. Windows recognizes the dongle as HID device.
-
-(find lsusb -vv below)
+The dongle has the USB ID ffff:1122 and the program talks to it via USB urb out
+packets. Windows recognizes the dongle as an HID device.
 
 The protocol
-============================
+============
 
-between the supplied exe and the usb dongle can be sniffed with wireshark. You will find payloads like this: `1A85F070200A0018`. 
-The program also has 3 parameters (find them in the settings box)
-- Bit Width 100-400 (in 50 increments): seems to be not relevant to generation of the control code.
-- Frame 3-255 the number of times the frame is resend. More often, more likely the outlet will receive the message, but the usb dongle is working longer on it
-- ID 0-65535 
+between the supplied exe and the USB dongle can be sniffed with Wireshark. You
+will find payloads like this: `1A85F070200A0018`.
+The program also has 3 parameters (find them in the settings box):
+* Bit Width 100-400 (in 50 increments): seems to be not relevant to generation
+  of the control code.
+* Frame 3-255: the number of times the frame is resent. The more often, the
+  more likely the outlet will receive the message, but the USB dongle will be
+  working longer on it.
+* ID 0-65535: To control separate sets of power outlets (as the program only
+  supports switching 4 outlets per ID).
 
-Then you have the "switch number" (1-4, all) and action (on, off). Observations in the spreadsheet.
-Take the first example: Bi 100	Frame:10	ID: 6789
+Then you have the "switch number" (1-4, all) and action (on, off). Observations
+in the spreadsheet.
+Take the first example:
+Bit width = 100, Frame = 10, ID = 6789
 
-- The first two byte are the ID in hex: `1A85`.
-- action byte, 1_ON is `F0`.
-- Checkbyte. Byte 1-4 mod 256 have to be 255
-- then you have a useless padding; value not important of `20`
-- then frame in hex `0A`
-- then follow two byte which are useless and change every time you restart the program. here `0018`
-- assemble and you get the above code `1A85_F0_70_20_0A_0018`.
+* The first two byte are the ID in hex: `1A85`.
+* action byte: 1_ON is `F0`.
+* checksum: sum(byte 1 + byte 2 + byte 3 + byte 4) mod 256 has to be 255
+* one byte of useless padding (value not important; `20` in this example)
+* frame resend count in hex: `0A`
+* two more bytes that seem to have no function and change every time you
+  restart the program. here `0018`
+
+Assemble and you get the above code `1A85_F0_70_20_0A_0018`.
 
 Demo implementation
-============================
+===================
 
-is based on pyusb. make sure you have installed pyusb first, tested with version pyusb-1.0.0b1. 
-With this command-line script you can control your outlets (Funksteckdose) by command line, scripts, etc... use your fantasy!
+is based on pyusb. Make sure you have installed pyusb first, tested with
+version pyusb-1.0.0b1.
+With this command-line script you can control your outlets (Funksteckdose) by
+command line, scripts, etc. -- use your fantasy!
 
-execute with `python send-usb-command.py offa` to switch all of. Knows `on<id>` and `off<id>` as parameters. Only one action per execution. Have fun!
-
-As I don't know how to calculate the intermediate byte no 4 (yet), the example script is fixed to frame/id values, but works. However, you likely will not be able to combine multiple id/outlet combinations in your house...
+Execute with `python revoltoutlets.py offa` to switch off all outlets.
+Possible commands are `on<id>`, `off<id>`, `ona`, and `offa`.
+The script accepts multiple commands at once, but they might not all be sent
+reliably due to delays in the transmitter. Use at your own risk or only send
+one command at a time if you want to be sure.
 
 Additional Credits
-===
-go to Ralph Babel, http://babel.de, for finding the checksum and the resend-frame behavior. Thanks!
+==================
+go to Ralph Babel, http://babel.de, for finding the checksum and the
+resend-frame behavior. Thanks!
 
-lsusb -vv
-===
+lsusb -vv output for the USB dongle
+===================================
 
 
 ```
