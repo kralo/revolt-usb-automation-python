@@ -55,6 +55,12 @@ The script accepts multiple commands at once, but they might not all be sent
 reliably due to delays in the transmitter. Use at your own risk or only send
 one command at a time if you want to be sure.
 
+Note about permissions
+==================
+If you get `usb.core.USBError: [Errno 13] Access denied (insufficient permissions)`
+you might need to run the script as sudo.
+
+
 Additional Credits
 ==================
 go to Ralph Babel, http://babel.de, for finding the checksum and the
