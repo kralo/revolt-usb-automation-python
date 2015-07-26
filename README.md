@@ -64,7 +64,7 @@ you might need to run the script as sudo.
 Additional Credits
 ==================
 go to Ralph Babel, http://babel.de, for finding the checksum and the
-resend-frame behavior. Thanks!
+resend-frame behavior and [n-st](https://github.com/n-st) for a thorough rewrite. Thanks!
 
 lsusb -vv output for the USB dongle
 ===================================
