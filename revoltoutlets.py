@@ -138,7 +138,7 @@ def main():
     default_frame_count = 2  # 3-255 number of sent frames (resend)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", nargs='+')
+    parser.add_argument("command", nargs='+', help='{on|off}{1..6}')
     parser.add_argument("--verbose", "-v", action='store_true', help="increase output verbosity")
     parser.add_argument("--tx-count", "-n", type=argparse_frame_count_constraints, default=default_frame_count,
                         help='Number of frame transmissions. More transmissions increase chance that the outlet '
