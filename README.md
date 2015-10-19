@@ -1,7 +1,7 @@
 revolt-usb-automation-python
 ============================
 
-Python example to control wireless 433MHz power outlets
+Python example to control wireless 433MHz power outlets. There also exists a [Java-Implementation](https://github.com/pfichtner/revolt-usb-automation-java) by @pfichtner .
 
 The Pearl / revolt PX-1672 and PX-1674 is a package with a power outlet that be
 controlled remotely via 433 MHz RF and a USB dongle.
